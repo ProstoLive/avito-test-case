@@ -1,0 +1,6 @@
+services:
+  webserver:
+    build: .
+    container_name: pr_webserver
+    ports:
+      - "8080:8080"
