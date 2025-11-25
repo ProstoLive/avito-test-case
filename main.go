@@ -15,9 +15,7 @@ func main() {
 	}
 	fmt.Println("Successfully connected to database")
 
-	if err := api.RegisterAPI(); err != nil {
-		fmt.Printf("Registering api error: %v", err)
-	}
+	api.RegisterAPI()
 
 	http.ListenAndServe(":8080", nil)
 }

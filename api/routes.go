@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"prmanagement/api/dto"
 	"prmanagement/db"
@@ -151,18 +150,13 @@ func PrReassign(w http.ResponseWriter, r *http.Request) {
 
 	reassignedPr, err := db.PrReassign(&body)
 	if err != nil {
-		fmt.Println(err)
 		HandleErrors(err, w)
 		return
 	}
 
 	jsonData, err := json.Marshal(*reassignedPr)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		JsonableError(w, RoutesError{
-			Code:    "INTERNAL_SERVER",
-			Message: "Internal server error",
-		})
+		HandleErrors(err, w)
 		return
 	}
 

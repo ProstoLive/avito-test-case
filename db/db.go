@@ -90,7 +90,13 @@ func GetTeam(teamName string) (*models.Team, error) {
 
 func UserSetIsActive(newStatus *dto.UserSetIsActive) (*models.User, error) {
 	var existUser models.User
-	err := DB.Get(&existUser, "SELECT user_id, username, team_name, is_active FROM users WHERE user_id = $1", newStatus.UserID)
+	err := DB.Get(
+		&existUser,
+		`SELECT user_id, username, team_name, is_active 
+		 FROM users 
+		 WHERE user_id = $1`,
+		newStatus.UserID)
+
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.New("NOT_FOUND")
@@ -100,14 +106,23 @@ func UserSetIsActive(newStatus *dto.UserSetIsActive) (*models.User, error) {
 		}
 	}
 
-	_, err = DB.Exec("UPDATE users SET is_active = $1 WHERE user_id = $2", newStatus.IsActive, newStatus.UserID)
+	_, err = DB.Exec(
+		"UPDATE users SET is_active = $1 WHERE user_id = $2",
+		newStatus.IsActive,
+		newStatus.UserID)
 
 	if err != nil {
 		fmt.Printf("Failed update status in database, error: %v", err)
 		return nil, err
 	}
 
-	err = DB.Get(&existUser, "SELECT user_id, username, team_name, is_active FROM users WHERE user_id = $1", newStatus.UserID)
+	err = DB.Get(
+		&existUser,
+		`SELECT user_id, username, team_name, is_active 
+		 FROM users 
+		 WHERE user_id = $1`,
+		newStatus.UserID)
+
 	if err != nil {
 		fmt.Printf("Failed to validate update on user, error: %v", err)
 	}
@@ -148,7 +163,8 @@ WITH filtered_users AS (
   AND users.is_active = true
 	AND users.user_id <> $2
 )
-SELECT array_agg(user_id) AS user_id, (SELECT COUNT(*) FROM filtered_users) AS total_count
+SELECT array_agg(user_id) AS user_id, 
+(SELECT COUNT(*) FROM filtered_users) AS total_count
 FROM filtered_users
 `
 
@@ -159,7 +175,11 @@ type potentialAssignees struct {
 
 func CreatePR(newPr *dto.CreatePR) (*models.PullRequest, error) {
 	var numOfAuthor int
-	err := DB.Get(&numOfAuthor, "SELECT COUNT(*) FROM users WHERE user_id = $1", newPr.AuthorID)
+	err := DB.Get(
+		&numOfAuthor,
+		"SELECT COUNT(*) FROM users WHERE user_id = $1",
+		newPr.AuthorID)
+
 	if err != nil {
 		fmt.Printf("Failed to fetch authors from database, error: %v", err)
 		return nil, err
@@ -169,7 +189,10 @@ func CreatePR(newPr *dto.CreatePR) (*models.PullRequest, error) {
 	}
 
 	var numOfPr int
-	err = DB.Get(&numOfPr, "SELECT COUNT(*) FROM pull_requests WHERE pull_request_id = $1", newPr.PRID)
+	err = DB.Get(
+		&numOfPr,
+		"SELECT COUNT(*) FROM pull_requests WHERE pull_request_id = $1",
+		newPr.PRID)
 	if err != nil {
 		fmt.Printf("Failed to fetch pull requests from database, error: %v", err)
 		return nil, err
@@ -181,7 +204,10 @@ func CreatePR(newPr *dto.CreatePR) (*models.PullRequest, error) {
 	var allAssignees potentialAssignees
 	var authorTeam string
 
-	err = DB.Get(&authorTeam, "SELECT team_name FROM users WHERE user_id = $1", newPr.AuthorID)
+	err = DB.Get(
+		&authorTeam,
+		"SELECT team_name FROM users WHERE user_id = $1",
+		newPr.AuthorID)
 	if err != nil {
 		fmt.Printf("Can't fetch author's team, error: %v", err)
 		return nil, err
@@ -215,9 +241,20 @@ func CreatePR(newPr *dto.CreatePR) (*models.PullRequest, error) {
 
 	err = DB.Get(
 		&resultedPr,
-		`INSERT INTO pull_requests (pull_request_id, pull_request_name, author_id, status, assigned_reviewers, created_at)
+		`INSERT INTO pull_requests (
+				pull_request_id, 
+				pull_request_name, 
+				author_id, 
+				status, 
+				assigned_reviewers, 
+				created_at)
 	 	 VALUES ($1, $2, $3, $4, $5, $6)
-		 RETURNING pull_request_id, pull_request_name, author_id, status, assigned_reviewers`,
+		 RETURNING 
+		 		pull_request_id, 
+				pull_request_name, 
+				author_id, 
+				status, 
+				assigned_reviewers`,
 		newPr.PRID,
 		newPr.PRName,
 		newPr.AuthorID,
@@ -239,7 +276,10 @@ func CreatePR(newPr *dto.CreatePR) (*models.PullRequest, error) {
 func MergePR(requestId *models.RequestPullRequestMerge) (*models.PullRequest, error) {
 	PRID := requestId.PullRequestId
 	var rowCount int
-	err := DB.Get(&rowCount, "SELECT COUNT(*) FROM pull_requests WHERE pull_request_id = $1", PRID)
+	err := DB.Get(
+		&rowCount,
+		"SELECT COUNT(*) FROM pull_requests WHERE pull_request_id = $1",
+		PRID)
 	if err != nil {
 		fmt.Printf("Failed to fetch pull requests from database, error: %v", err)
 		return nil, err
@@ -255,7 +295,13 @@ func MergePR(requestId *models.RequestPullRequestMerge) (*models.PullRequest, er
 		&mergedPR,
 		`UPDATE pull_requests SET status = 'MERGED', merged_at = $1
 	 	 WHERE pull_request_id = $2
-		 RETURNING pull_request_id, pull_request_name, author_id, status, assigned_reviewers, merged_at`,
+		 RETURNING 
+		 		pull_request_id, 
+				pull_request_name, 
+				author_id, 
+				status, 
+				assigned_reviewers, 
+				merged_at`,
 		mergeTime,
 		PRID)
 	if err != nil {
@@ -267,7 +313,14 @@ func MergePR(requestId *models.RequestPullRequestMerge) (*models.PullRequest, er
 
 var reassignQuery string = `
 WITH current_pr AS (
-  SELECT pull_request_id, pull_request_name, author_id, status, assigned_reviewers, created_at, merged_at
+  SELECT 
+		pull_request_id, 
+		pull_request_name, 
+		author_id, 
+		status, 
+		assigned_reviewers, 
+		created_at, 
+		merged_at
   FROM pull_requests
   WHERE pull_request_id = $2
 ),
@@ -301,28 +354,43 @@ UPDATE pull_requests pr
 SET assigned_reviewers = u.assigned_reviewers
 FROM updated_pr u
 WHERE pr.pull_request_id = u.pull_request_id
-RETURNING u.pull_request_id, u.pull_request_name, u.author_id, u.status, u.assigned_reviewers, 
-          u.created_at, u.merged_at, u.replaced_by
-
-
-`
+RETURNING 
+	u.pull_request_id, 
+	u.pull_request_name, 
+	u.author_id, 
+	u.status, 
+	u.assigned_reviewers, 
+	u.created_at, 
+	u.merged_at, 
+	u.replaced_by`
 
 func PrReassign(requestData *models.RequestPrReassign) (*models.ResponsePrReassign, error) {
 
 	var prCount int
-	err := DB.Get(&prCount, "SELECT COUNT(*) FROM pull_requests WHERE pull_request_id = $1", requestData.PullRequestID)
+	err := DB.Get(
+		&prCount,
+		"SELECT COUNT(*) FROM pull_requests WHERE pull_request_id = $1",
+		requestData.PullRequestID)
+
 	if err != nil {
 		return nil, errors.New("NOT_FOUND")
 	}
 
 	var userCount int
-	err = DB.Get(&userCount, "SELECT COUNT(*) FROM users WHERE user_id = $1", requestData.OldReviewerID)
+	err = DB.Get(
+		&userCount,
+		"SELECT COUNT(*) FROM users WHERE user_id = $1",
+		requestData.OldReviewerID)
 	if err != nil {
 		return nil, errors.New("NOT_FOUND")
 	}
 
 	var prStatus string
-	err = DB.Get(&prStatus, "SELECT status FROM pull_requests WHERE pull_request_id = $1", requestData.PullRequestID)
+	err = DB.Get(
+		&prStatus,
+		"SELECT status FROM pull_requests WHERE pull_request_id = $1",
+		requestData.PullRequestID)
+
 	if err != nil {
 		fmt.Printf("Failed to fetch pull request status, error: %v", err)
 		return nil, err
@@ -378,7 +446,11 @@ func PrReassign(requestData *models.RequestPrReassign) (*models.ResponsePrReassi
 	}
 
 	var mPR models.MiddlePrReassign
-	err = DB.Get(&mPR, reassignQuery, requestData.OldReviewerID, requestData.PullRequestID)
+	err = DB.Get(
+		&mPR,
+		reassignQuery,
+		requestData.OldReviewerID,
+		requestData.PullRequestID)
 	if err != nil {
 		fmt.Printf("Failed to reassign reviewer, error: %v", err)
 		return nil, err
