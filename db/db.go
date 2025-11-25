@@ -116,6 +116,25 @@ func UserSetIsActive(newStatus *dto.UserSetIsActive) (*models.User, error) {
 
 }
 
+func UserGetReview(userID string) (*models.UserReviews, error){
+	var PRSlice []models.PullRequestShort
+	
+	err := DB.Select(
+		&PRSlice, 
+		`SELECT pull_request_id, pull_request_name, author_id, status 
+		FROM pull_requests 
+		WHERE $1 = ANY(assigned_reviewers)`, userID)
+	if err != nil {
+		fmt.Printf("Failed search for user in database. Error: %v", err)
+		return nil, err
+	}
+
+	return &models.UserReviews{
+		UserID: userID,
+		PullRequests: PRSlice,
+	}, nil
+}
+
 
 var AssigneeQuery string = `
 WITH filtered_users AS (
@@ -247,3 +266,4 @@ func MergePR(requestId *models.RequestPullRequestMerge) (*models.PullRequest, er
 	}
 	return &mergedPR, nil
 }
+

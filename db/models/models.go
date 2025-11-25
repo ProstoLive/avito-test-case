@@ -57,6 +57,11 @@ type PullRequestShort struct {
 	Status          string `db:"status"`
 }
 
+type UserReviews struct {
+	UserID       string             `json:"user_id"`
+	PullRequests []PullRequestShort `json:"pull_requests"`
+}
+
 func (u *ScannableUsers) Scan(src interface{}) error {
 	bytes, ok := src.([]byte)
 	if !ok {

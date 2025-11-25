@@ -115,7 +115,34 @@ func UserSetIsActive(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonData)
 }
 
-func UserGetPrs(w http.ResponseWriter, r *http.Request) {}
+func UserGetPrs(w http.ResponseWriter, r *http.Request) {
+	userId := r.URL.Query().Get("user_id")
+
+	w.Header().Set("Content-Type", "application/json")
+
+	userReviews, err := db.UserGetReview(userId)
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		JsonableError(w, RoutesError{
+			Code:    "INTERNAL_SERVER",
+			Message: "Internal server error",
+		})
+		return
+	}
+
+	jsonData, err := json.Marshal(userReviews)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		JsonableError(w, RoutesError{
+			Code:    "INTERNAL_SERVER",
+			Message: "Internal server error",
+		})
+		return
+	}
+
+	w.Write(jsonData)
+}
 
 func PrCreate(w http.ResponseWriter, r *http.Request) {
 	var body dto.CreatePR
