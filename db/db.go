@@ -7,8 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
-	"prmanagement/api/dto"
-	"prmanagement/db/models"
+	"prmanagement/models"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -88,7 +87,7 @@ func GetTeam(teamName string) (*models.Team, error) {
 	return &resultTeam, nil
 }
 
-func UserSetIsActive(newStatus *dto.UserSetIsActive) (*models.User, error) {
+func UserSetIsActive(newStatus *models.UserSetIsActive) (*models.User, error) {
 	var existUser models.User
 	err := DB.Get(
 		&existUser,
@@ -173,7 +172,7 @@ type potentialAssignees struct {
 	TotalCount int            `db:"total_count"`
 }
 
-func CreatePR(newPr *dto.CreatePR) (*models.PullRequest, error) {
+func CreatePR(newPr *models.CreatePR) (*models.PullRequest, error) {
 	var numOfAuthor int
 	err := DB.Get(
 		&numOfAuthor,

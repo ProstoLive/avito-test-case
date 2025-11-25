@@ -4,9 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"prmanagement/api/dto"
 	"prmanagement/db"
-	"prmanagement/db/models"
+	"prmanagement/models"
 )
 
 func AddTeam(w http.ResponseWriter, r *http.Request) {
@@ -45,7 +44,7 @@ func GetTeam(w http.ResponseWriter, r *http.Request) {
 }
 
 func UserSetIsActive(w http.ResponseWriter, r *http.Request) {
-	var body dto.UserSetIsActive
+	var body models.UserSetIsActive
 
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
@@ -90,7 +89,7 @@ func UserGetPrs(w http.ResponseWriter, r *http.Request) {
 }
 
 func PrCreate(w http.ResponseWriter, r *http.Request) {
-	var body dto.CreatePR
+	var body models.CreatePR
 
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
