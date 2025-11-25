@@ -8,9 +8,9 @@ func RegisterAPI() error {
 
 	http.HandleFunc("POST /users/setIsActive", UserSetIsActive)
 	http.HandleFunc("GET /users/getReview", UserGetPrs)
-	
+
 	http.HandleFunc("POST /pullRequest/create", PrCreate)
 	http.HandleFunc("POST /pullRequest/merge", PrMerge)
-
+	http.HandleFunc("POST /pullRequest/reassign", PrReassign)
 	return nil
 }

@@ -116,11 +116,11 @@ func UserSetIsActive(newStatus *dto.UserSetIsActive) (*models.User, error) {
 
 }
 
-func UserGetReview(userID string) (*models.UserReviews, error){
+func UserGetReview(userID string) (*models.UserReviews, error) {
 	var PRSlice []models.PullRequestShort
-	
+
 	err := DB.Select(
-		&PRSlice, 
+		&PRSlice,
 		`SELECT pull_request_id, pull_request_name, author_id, status 
 		FROM pull_requests 
 		WHERE $1 = ANY(assigned_reviewers)`, userID)
@@ -130,13 +130,12 @@ func UserGetReview(userID string) (*models.UserReviews, error){
 	}
 
 	return &models.UserReviews{
-		UserID: userID,
+		UserID:       userID,
 		PullRequests: PRSlice,
 	}, nil
 }
 
-
-var AssigneeQuery string = `
+var assigneeQuery string = `
 WITH filtered_users AS (
   SELECT user_id
   FROM users
@@ -154,8 +153,8 @@ FROM filtered_users
 `
 
 type potentialAssignees struct {
-	UserIDs pq.StringArray `db:"user_id"`
-	TotalCount int `db:"total_count"`
+	UserIDs    pq.StringArray `db:"user_id"`
+	TotalCount int            `db:"total_count"`
 }
 
 func CreatePR(newPr *dto.CreatePR) (*models.PullRequest, error) {
@@ -188,7 +187,7 @@ func CreatePR(newPr *dto.CreatePR) (*models.PullRequest, error) {
 		return nil, err
 	}
 
-	err = DB.Get(&allAssignees, AssigneeQuery, authorTeam, newPr.AuthorID)
+	err = DB.Get(&allAssignees, assigneeQuery, authorTeam, newPr.AuthorID)
 
 	if err != nil {
 		fmt.Printf("Can't fetch potential assignees, error: %v", err)
@@ -197,16 +196,16 @@ func CreatePR(newPr *dto.CreatePR) (*models.PullRequest, error) {
 
 	var newAssignees []string
 
-	switch allAssignees.TotalCount{ 
+	switch allAssignees.TotalCount {
 	case 0:
 		break
 	case 1:
 		newAssignees = append(newAssignees, allAssignees.UserIDs[0])
 	default:
-		first := rand.Intn(len(allAssignees.UserIDs)) 
-		second := rand.Intn(len(allAssignees.UserIDs)) 
+		first := rand.Intn(len(allAssignees.UserIDs))
+		second := rand.Intn(len(allAssignees.UserIDs))
 		for second == first {
-			second = rand.Intn(len(allAssignees.UserIDs)) 
+			second = rand.Intn(len(allAssignees.UserIDs))
 		}
 		newAssignees = append(newAssignees, allAssignees.UserIDs[first])
 		newAssignees = append(newAssignees, allAssignees.UserIDs[second])
@@ -234,7 +233,6 @@ func CreatePR(newPr *dto.CreatePR) (*models.PullRequest, error) {
 		fmt.Printf("New pull request %s has been registered\n", newPr.PRName)
 	}
 
-
 	return &resultedPr, nil
 }
 
@@ -254,7 +252,7 @@ func MergePR(requestId *models.RequestPullRequestMerge) (*models.PullRequest, er
 
 	mergeTime := time.Now()
 	err = DB.Get(
-		&mergedPR, 
+		&mergedPR,
 		`UPDATE pull_requests SET status = 'MERGED', merged_at = $1
 	 	 WHERE pull_request_id = $2
 		 RETURNING pull_request_id, pull_request_name, author_id, status, assigned_reviewers, merged_at`,
@@ -267,3 +265,139 @@ func MergePR(requestId *models.RequestPullRequestMerge) (*models.PullRequest, er
 	return &mergedPR, nil
 }
 
+var reassignQuery string = `
+WITH current_pr AS (
+  SELECT pull_request_id, pull_request_name, author_id, status, assigned_reviewers, created_at, merged_at
+  FROM pull_requests
+  WHERE pull_request_id = $2
+),
+random_reviewer AS (
+  SELECT user_id
+  FROM users, current_pr
+  WHERE team_name = (SELECT team_name FROM users WHERE user_id = $1)
+    AND user_id <> $1
+    AND user_id <> ALL(current_pr.assigned_reviewers)
+		AND is_active = true
+  ORDER BY RANDOM()
+  LIMIT 1
+),
+updated_pr AS (
+  SELECT
+    pull_request_id,
+    pull_request_name,
+    author_id,
+    status,
+    array_replace(
+      assigned_reviewers,
+      $1,
+      (SELECT user_id FROM random_reviewer)
+    ) AS assigned_reviewers,
+    created_at,
+    merged_at,
+    (SELECT user_id FROM random_reviewer) AS replaced_by
+  FROM current_pr
+)
+UPDATE pull_requests pr
+SET assigned_reviewers = u.assigned_reviewers
+FROM updated_pr u
+WHERE pr.pull_request_id = u.pull_request_id
+RETURNING u.pull_request_id, u.pull_request_name, u.author_id, u.status, u.assigned_reviewers, 
+          u.created_at, u.merged_at, u.replaced_by
+
+
+`
+
+func PrReassign(requestData *models.RequestPrReassign) (*models.ResponsePrReassign, error) {
+
+	var prCount int
+	err := DB.Get(&prCount, "SELECT COUNT(*) FROM pull_requests WHERE pull_request_id = $1", requestData.PullRequestID)
+	if err != nil {
+		return nil, errors.New("NOT_FOUND")
+	}
+
+	var userCount int
+	err = DB.Get(&userCount, "SELECT COUNT(*) FROM users WHERE user_id = $1", requestData.OldReviewerID)
+	if err != nil {
+		return nil, errors.New("NOT_FOUND")
+	}
+
+	var prStatus string
+	err = DB.Get(&prStatus, "SELECT status FROM pull_requests WHERE pull_request_id = $1", requestData.PullRequestID)
+	if err != nil {
+		fmt.Printf("Failed to fetch pull request status, error: %v", err)
+		return nil, err
+	}
+	if prStatus == "MERGED" {
+		return nil, errors.New("PR_MERGED")
+	}
+
+	var isAssigned bool
+	err = DB.Get(
+		&isAssigned,
+		`SELECT $1 = ANY(assigned_reviewers) 
+		 FROM pull_requests
+		 WHERE pull_request_id = $2`,
+		requestData.OldReviewerID,
+		requestData.PullRequestID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("NOT_FOUND")
+		}
+		return nil, err
+	}
+	if !isAssigned {
+		return nil, errors.New("NOT_ASSIGNED")
+	}
+
+	var candidateCount int
+	err = DB.Get(
+		&candidateCount,
+		`WITH current_pr AS (
+  	 SELECT assigned_reviewers
+  	 FROM pull_requests
+  	 WHERE pull_request_id = $2
+		)
+		 SELECT COUNT(*)
+	   FROM users, current_pr
+		 WHERE team_name = (
+		 	SELECT team_name 
+			FROM users 
+			WHERE user_id = $1)
+  	 	AND user_id <> $1
+  	 	AND user_id <> ALL(current_pr.assigned_reviewers)
+			AND is_active = true`,
+		requestData.OldReviewerID,
+		requestData.PullRequestID,
+	)
+	if err != nil {
+		fmt.Printf("Failed to fetch available candidates, error: %v", err)
+		return nil, err
+	}
+	if candidateCount == 0 {
+		return nil, errors.New("NO_CANDIDATE")
+	}
+
+	var mPR models.MiddlePrReassign
+	err = DB.Get(&mPR, reassignQuery, requestData.OldReviewerID, requestData.PullRequestID)
+	if err != nil {
+		fmt.Printf("Failed to reassign reviewer, error: %v", err)
+		return nil, err
+	}
+
+	reassignedPr := models.ResponsePrReassign{
+		ResponsePullRequest: models.ResponsePullRequest{
+			PR: models.PullRequest{
+				UserPullRequest: models.UserPullRequest{
+					PullRequestID:     mPR.PullRequestID,
+					PullRequestName:   mPR.PullRequestName,
+					AuthorID:          mPR.AuthorID,
+					Status:            mPR.Status,
+					AssignedReviewers: mPR.AssignedReviewers,
+				},
+			},
+		},
+		ReplacedBy: mPR.ReplacedBy,
+	}
+
+	return &reassignedPr, nil
+}

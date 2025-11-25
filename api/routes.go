@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"prmanagement/api/dto"
@@ -252,4 +253,32 @@ func PrMerge(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonData)
 }
 
-func PrReassign(w http.ResponseWriter, r *http.Request) {}
+func PrReassign(w http.ResponseWriter, r *http.Request) {
+	var body models.RequestPrReassign
+
+	err := json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		HandleErrors(errors.New("INVALID_REQUEST"), w)
+		return
+	}
+
+	reassignedPr, err := db.PrReassign(&body)
+	if err != nil {
+		fmt.Println(err)
+		HandleErrors(err, w)
+		return
+	}
+
+	jsonData, err := json.Marshal(*reassignedPr)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		JsonableError(w, RoutesError{
+			Code:    "INTERNAL_SERVER",
+			Message: "Internal server error",
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	w.Write(jsonData)
+}

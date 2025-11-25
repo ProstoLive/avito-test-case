@@ -57,6 +57,29 @@ type PullRequestShort struct {
 	Status          string `db:"status"`
 }
 
+type RequestPrReassign struct {
+	PullRequestID string `json:"pull_request_id"`
+	OldReviewerID string `json:"old_reviewer_id"`
+}
+
+type ResponsePrReassign struct {
+	ResponsePullRequest
+	ReplacedBy string `db:"replaced_by" json:"replaced_by"`
+}
+
+type MiddlePrReassign struct {
+  PullRequestID     string         `db:"pull_request_id"`
+  PullRequestName   string         `db:"pull_request_name"`
+  AuthorID          string         `db:"author_id"`
+  Status            string         `db:"status"`
+  AssignedReviewers pq.StringArray `db:"assigned_reviewers"`
+  CreatedAt         *time.Time     `db:"created_at"`
+  MergedAt          *time.Time     `db:"merged_at"`
+  ReplacedBy        string         `db:"replaced_by"`
+}
+
+
+
 type UserReviews struct {
 	UserID       string             `json:"user_id"`
 	PullRequests []PullRequestShort `json:"pull_requests"`
