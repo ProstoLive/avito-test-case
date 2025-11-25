@@ -1,6 +1,10 @@
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"fmt"
+	"time"
+)
 
 type User struct {
 	UserID   string `db:"user_id"`
@@ -9,9 +13,11 @@ type User struct {
 	IsActive bool   `db:"is_active"`
 }
 
+type ScannableUsers []User
+
 type Team struct {
-	TeamName string `db:"team_name"`
-	Members  []User `db:"members"`
+	TeamName string `db:"team_name" json:"team_name"`
+	Members  ScannableUsers `db:"members" json:"members"`
 }
 
 type TeamMember struct {
@@ -35,4 +41,12 @@ type PullRequestShort struct {
 	PullRequestName string `db:"pull_request_name"`
 	AuthorID        string `db:"author_id"`
 	Status          string `db:"status"`
+}
+
+func (u *ScannableUsers) Scan(src interface{}) error {
+	bytes, ok := src.([]byte)
+	if !ok {
+		return fmt.Errorf("failed to scan Users: expected []byte, got %T", src)
+	}
+	return json.Unmarshal(bytes, u)
 }
