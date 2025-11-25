@@ -5,8 +5,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    env_file:
-      - .env
+    environment:
+      - DB_HOST=pr_db
+      - DB_PORT=5432
+      - DB_NAME=pr_db
+      - DB_USER=admin
+      - DB_PASSWORD=admin 
     ports:
       - "8080:8080"
   
@@ -24,8 +28,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 3
-    env_file:
-      - .env
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
