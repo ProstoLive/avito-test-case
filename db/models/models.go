@@ -38,12 +38,16 @@ type UserPullRequest struct {
 
 type PullRequest struct {
 	UserPullRequest
-	CreatedAt time.Time  `db:"created_at,omitempty"`
-	MergedAt  *time.Time `db:"merged_at,omitempty"`
+	CreatedAt *time.Time `db:"created_at" json:"createdAt,omitempty"`
+	MergedAt  *time.Time `db:"merged_at" json:"mergedAt,omitempty"`
+}
+
+type RequestPullRequestMerge struct {
+	PullRequestId string `db:"pull_request_id" json:"pull_request_id"`
 }
 
 type ResponsePullRequest struct {
-	PR UserPullRequest `json:"pr"`
+	PR PullRequest `json:"pr"`
 }
 
 type PullRequestShort struct {

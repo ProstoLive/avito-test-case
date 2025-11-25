@@ -125,7 +125,7 @@ WITH filtered_users AS (
   WHERE NOT EXISTS (
     SELECT 1
     FROM pull_requests, unnest(assigned_reviewers) AS reviewer
-    WHERE reviewer = users.user_id
+    WHERE reviewer = users.user_id AND pull_requests.status <> 'MERGED'
   )
   AND users.is_active = true
 	AND users.user_id <> $2
@@ -139,7 +139,7 @@ type potentialAssignees struct {
 	TotalCount int `db:"total_count"`
 }
 
-func CreatePR(newPr *dto.CreatePR) (*models.UserPullRequest, error) {
+func CreatePR(newPr *dto.CreatePR) (*models.PullRequest, error) {
 	var numOfAuthor int
 	err := DB.Get(&numOfAuthor, "SELECT COUNT(*) FROM users WHERE user_id = $1", newPr.AuthorID)
 	if err != nil {
@@ -193,7 +193,7 @@ func CreatePR(newPr *dto.CreatePR) (*models.UserPullRequest, error) {
 		newAssignees = append(newAssignees, allAssignees.UserIDs[second])
 	}
 
-	var resultedPr models.UserPullRequest
+	var resultedPr models.PullRequest
 
 	err = DB.Get(
 		&resultedPr,
@@ -217,4 +217,33 @@ func CreatePR(newPr *dto.CreatePR) (*models.UserPullRequest, error) {
 
 
 	return &resultedPr, nil
+}
+
+func MergePR(requestId *models.RequestPullRequestMerge) (*models.PullRequest, error) {
+	PRID := requestId.PullRequestId
+	var rowCount int
+	err := DB.Get(&rowCount, "SELECT COUNT(*) FROM pull_requests WHERE pull_request_id = $1", PRID)
+	if err != nil {
+		fmt.Printf("Failed to fetch pull requests from database, error: %v", err)
+		return nil, err
+	}
+	if rowCount == 0 {
+		return nil, errors.New("NOT_FOUND")
+	}
+
+	var mergedPR models.PullRequest
+
+	mergeTime := time.Now()
+	err = DB.Get(
+		&mergedPR, 
+		`UPDATE pull_requests SET status = 'MERGED', merged_at = $1
+	 	 WHERE pull_request_id = $2
+		 RETURNING pull_request_id, pull_request_name, author_id, status, assigned_reviewers, merged_at`,
+		mergeTime,
+		PRID)
+	if err != nil {
+		fmt.Printf("Failed to update pull request status, error: %v", err)
+		return nil, err
+	}
+	return &mergedPR, nil
 }

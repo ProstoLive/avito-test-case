@@ -16,10 +16,10 @@ func AddTeam(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		JsonableError(w, RoutesError{
-			Code: "INVALID_REQUEST",
+			Code:    "INVALID_REQUEST",
 			Message: "Invalid request body",
 		})
-    return
+		return
 	}
 
 	if err = db.AddTeam(&body); err != nil {
@@ -49,25 +49,25 @@ func GetTeam(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 
 			JsonableError(w, RoutesError{
-				Code: "NOT_FOUND",
+				Code:    "NOT_FOUND",
 				Message: "resource not found",
 			})
 			return
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
 			JsonableError(w, RoutesError{
-				Code: "INTERNAL_SERVER",
+				Code:    "INTERNAL_SERVER",
 				Message: "Internal server error",
 			})
 			return
 		}
 	}
-		
+
 	jsonData, err := json.Marshal(targetTeam)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		JsonableError(w, RoutesError{
-			Code: "INTERNAL_SERVER",
+			Code:    "INTERNAL_SERVER",
 			Message: "Internal server error",
 		})
 		return
@@ -82,10 +82,10 @@ func UserSetIsActive(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		JsonableError(w, RoutesError{
-			Code: "INVALID_REQUEST",
+			Code:    "INVALID_REQUEST",
 			Message: "Invalid request body",
 		})
-    return
+		return
 	}
 
 	var resultedUser *models.User
@@ -95,7 +95,7 @@ func UserSetIsActive(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 
 			JsonableError(w, RoutesError{
-				Code: "NOT_FOUND",
+				Code:    "NOT_FOUND",
 				Message: "resource not found",
 			})
 			return
@@ -106,7 +106,7 @@ func UserSetIsActive(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		JsonableError(w, RoutesError{
-			Code: "INTERNAL_SERVER",
+			Code:    "INTERNAL_SERVER",
 			Message: "Internal server error",
 		})
 		return
@@ -124,10 +124,10 @@ func PrCreate(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		JsonableError(w, RoutesError{
-			Code: "INVALID_REQUEST",
+			Code:    "INVALID_REQUEST",
 			Message: "Invalid request body",
 		})
-    return
+		return
 	}
 
 	newPr, err := db.CreatePR(&body)
@@ -137,7 +137,7 @@ func PrCreate(w http.ResponseWriter, r *http.Request) {
 		case "NOT FOUND":
 			w.WriteHeader(http.StatusNotFound)
 			JsonableError(w, RoutesError{
-				Code: "NOT_FOUND",
+				Code:    "NOT_FOUND",
 				Message: "resource not found",
 			})
 			return
@@ -145,16 +145,16 @@ func PrCreate(w http.ResponseWriter, r *http.Request) {
 		case "PR_EXISTS":
 			w.WriteHeader(http.StatusConflict)
 			JsonableError(w, RoutesError{
-				Code: "PR_EXISTS",
+				Code:    "PR_EXISTS",
 				Message: "PR id already exists",
 			})
 			return
-		
+
 		default:
 			fmt.Println(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			JsonableError(w, RoutesError{
-				Code: "INVALID_REQUEST",
+				Code:    "INVALID_REQUEST",
 				Message: "Invalid request body",
 			})
 			return
@@ -165,15 +165,64 @@ func PrCreate(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		JsonableError(w, RoutesError{
-			Code: "INTERNAL_SERVER",
+			Code:    "INTERNAL_SERVER",
 			Message: "Internal server error",
 		})
 		return
 	}
 
+	w.WriteHeader(http.StatusCreated)
 	w.Write(jsonData)
 }
 
-func PrMerge(w http.ResponseWriter, r *http.Request) {}
+func PrMerge(w http.ResponseWriter, r *http.Request) {
+	var body models.RequestPullRequestMerge
+
+	err := json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		JsonableError(w, RoutesError{
+			Code:    "INVALID_REQUEST",
+			Message: "Invalid request body",
+		})
+		return
+	}
+
+	updPr, err := db.MergePR(&body)
+
+	if err != nil {
+		switch err.Error() {
+		case "NOT FOUND":
+			w.WriteHeader(http.StatusNotFound)
+			JsonableError(w, RoutesError{
+				Code:    "NOT_FOUND",
+				Message: "resource not found",
+			})
+			return
+
+		default:
+			fmt.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			JsonableError(w, RoutesError{
+				Code:    "INVALID_REQUEST",
+				Message: "Invalid request body",
+			})
+			return
+		}
+	}
+
+	jsonData, err := json.Marshal(updPr)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		JsonableError(w, RoutesError{
+			Code:    "INTERNAL_SERVER",
+			Message: "Internal server error",
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	w.Write(jsonData)
+}
 
 func PrReassign(w http.ResponseWriter, r *http.Request) {}
