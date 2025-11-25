@@ -22,3 +22,19 @@ CREATE TABLE Pull_requests (
   merged_at TIMESTAMP,
   FOREIGN KEY (author_id) REFERENCES Users (user_id)
 );
+
+INSERT INTO users (user_id, username, team_name, is_active) VALUES ('1', 'Dutch', 'prog', true);
+INSERT INTO users (user_id, username, team_name, is_active) VALUES ('2', 'Arthur', 'prog', true);
+INSERT INTO users (user_id, username, team_name, is_active) VALUES ('3', 'John', 'prog', true);
+INSERT INTO users (user_id, username, team_name, is_active) VALUES ('4', 'Micah', 'prog', true);
+
+INSERT INTO users (user_id, username, team_name, is_active) VALUES ('5', 'Abby', 'HR', true);
+INSERT INTO users (user_id, username, team_name, is_active) VALUES ('6', 'Joel', 'HR', true);
+INSERT INTO users (user_id, username, team_name, is_active) VALUES ('7', 'Ellie', 'HR', true);
+INSERT INTO users (user_id, username, team_name, is_active) VALUES ('8', 'Tommie', 'HR', true);
+
+INSERT INTO users (user_id, username, team_name, is_active) VALUES ('9', 'Octane', 'cicd', true);
+INSERT INTO users (user_id, username, team_name, is_active) VALUES ('10', 'Gibraltar', 'cicd', true);
+INSERT INTO users (user_id, username, team_name, is_active) VALUES ('11', 'Pathfinder', 'cicd', true);
+INSERT INTO users (user_id, username, team_name, is_active) VALUES ('12', 'Lifeline', 'cicd', true);
+INSERT INTO users (user_id, username, team_name, is_active) VALUES ('13', 'Bangalore', 'cicd', true);
