@@ -7,6 +7,8 @@ func RegisterAPI() error {
 	http.HandleFunc("GET /team/get", GetTeam)
 
 	http.HandleFunc("POST /users/setIsActive", UserSetIsActive)
+	
+	http.HandleFunc("POST /pullRequest/create", PrCreate)
 
 	return nil
 }

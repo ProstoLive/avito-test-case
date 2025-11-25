@@ -117,7 +117,62 @@ func UserSetIsActive(w http.ResponseWriter, r *http.Request) {
 
 func UserGetPrs(w http.ResponseWriter, r *http.Request) {}
 
-func PrCreate(w http.ResponseWriter, r *http.Request) {}
+func PrCreate(w http.ResponseWriter, r *http.Request) {
+	var body dto.CreatePR
+
+	err := json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		JsonableError(w, RoutesError{
+			Code: "INVALID_REQUEST",
+			Message: "Invalid request body",
+		})
+    return
+	}
+
+	newPr, err := db.CreatePR(&body)
+
+	if err != nil {
+		switch err.Error() {
+		case "NOT FOUND":
+			w.WriteHeader(http.StatusNotFound)
+			JsonableError(w, RoutesError{
+				Code: "NOT_FOUND",
+				Message: "resource not found",
+			})
+			return
+
+		case "PR_EXISTS":
+			w.WriteHeader(http.StatusConflict)
+			JsonableError(w, RoutesError{
+				Code: "PR_EXISTS",
+				Message: "PR id already exists",
+			})
+			return
+		
+		default:
+			fmt.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			JsonableError(w, RoutesError{
+				Code: "INVALID_REQUEST",
+				Message: "Invalid request body",
+			})
+			return
+		}
+	}
+
+	jsonData, err := json.Marshal(models.ResponsePullRequest{*newPr})
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		JsonableError(w, RoutesError{
+			Code: "INTERNAL_SERVER",
+			Message: "Internal server error",
+		})
+		return
+	}
+
+	w.Write(jsonData)
+}
 
 func PrMerge(w http.ResponseWriter, r *http.Request) {}
 

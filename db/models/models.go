@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 type User struct {
@@ -16,7 +18,7 @@ type User struct {
 type ScannableUsers []User
 
 type Team struct {
-	TeamName string `db:"team_name" json:"team_name"`
+	TeamName string         `db:"team_name" json:"team_name"`
 	Members  ScannableUsers `db:"members" json:"members"`
 }
 
@@ -26,14 +28,22 @@ type TeamMember struct {
 	IsActive bool   `db:"is_active"`
 }
 
+type UserPullRequest struct {
+	PullRequestID     string         `db:"pull_request_id"`
+	PullRequestName   string         `db:"pull_request_name"`
+	AuthorID          string         `db:"author_id"`
+	Status            string         `db:"status"`
+	AssignedReviewers pq.StringArray `db:"assigned_reviewers"`
+}
+
 type PullRequest struct {
-	PullRequestID     string    `db:"pull_request_id"`
-	PullRequestName   string    `db:"pull_request_name"`
-	AuthorID          string    `db:"author_id"`
-	Status            string    `db:"status"`
-	AssignedReviewers []string  `db:"assigned_reviewers"`
-	CreatedAt         time.Time `db:"createdAt,omitempty"`
-	MergedAt          time.Time `db:"merged_at,omitempty"`
+	UserPullRequest
+	CreatedAt time.Time  `db:"created_at,omitempty"`
+	MergedAt  *time.Time `db:"merged_at,omitempty"`
+}
+
+type ResponsePullRequest struct {
+	PR UserPullRequest `json:"pr"`
 }
 
 type PullRequestShort struct {
