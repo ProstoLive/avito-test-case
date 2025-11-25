@@ -9,7 +9,7 @@ CREATE TABLE Users (
 
 CREATE TABLE Teams (
   team_name VARCHAR PRIMARY KEY,
-  members VARCHAR[]
+  members JSONB
 );
 
 CREATE TABLE Pull_requests (
@@ -19,5 +19,6 @@ CREATE TABLE Pull_requests (
   status merge_status,
   assigned_reviewers VARCHAR[],
   created_at TIMESTAMP,
-  merged_at TIMESTAMP
+  merged_at TIMESTAMP,
+  FOREIGN KEY (author_id) REFERENCES Users (user_id)
 );
